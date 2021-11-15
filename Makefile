@@ -1,9 +1,10 @@
-CONTIKI_PROJECT = Application
+CONTIKI_PROJECT = ClimateSensor
+#Sink ActuatorSensor
 
 # build targets
 all : ${CONTIKI_PROJECT}
 
-PROJECR_SOURCEFILES += Climate.c Sink.c ActuatorSensor.c ClimateSensor.c
+PROJECT_SOURCEFILES += Climate.c
 
 CONTIKI = ../..
-inlcude ${CONTIKI}/Makefile.include
+include ${CONTIKI}/Makefile.include

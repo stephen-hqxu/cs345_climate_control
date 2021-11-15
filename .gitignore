@@ -1,2 +1,7 @@
 #ignore vscode files
 .vscode/
+#ignore build files
+build/
+
+#binary files from Cooja
+*.cooja

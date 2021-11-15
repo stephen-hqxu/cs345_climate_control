@@ -4,11 +4,6 @@
 #include <stdbool.h>
 
 /**
- * @brief Initialise climate control environment
- **/
-void initClimate();
-
-/**
  * @brief Get the temperature of the environment.
  * @return The current temperature of the environment.
  * 

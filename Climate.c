@@ -29,10 +29,14 @@ static void timerCallback(void* ptr){
 	Temperature += ActuatorMotor ? DropRate : RiseRate;
 }
 
-//-------------- Header Functions ---------------------
-#include "Climate.h"
+static void initClimate(){
+	//a flag to indicate if the climate has been setup
+	static bool setup = false;
+	if(setup){
+		//skip initialisation if it has been done
+		return;
+	}
 
-void initClimate(){
 	//setup timer based on AC status
 	//we set the callback to every 10 seconds
 	ctimer_set(&TempTimer, CLOCK_SECOND * 10, &timerCallback, NULL);
@@ -42,10 +46,15 @@ void initClimate(){
 	//20◦C at the start of work in the morning
 	Temperature = 20.0f;
 	//the actuators (i.e., both ACs or fans) are off.
-	setActuatorMotor(false);
+	ActuatorMotor = false;
+	setup = true;
 }
 
+//-------------- Header Functions ---------------------
+#include "Climate.h"
+
 float getTemperature(){
+	initClimate();
 	//Add some noise to the temperature retrieved by different temperature sensors
 	return Temperature + getNext(TEMP_DIFFERENCE_BOUND);
 }
