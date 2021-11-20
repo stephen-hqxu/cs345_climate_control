@@ -25,4 +25,9 @@
 #define CLIMATE_SENSOR_PORT 8765
 #define ACTUATOR_PORT 24680
 
+#define ACTUATOR_STATUS_REQUEST "?"
+#define ACTUATOR_ACK "!"
+#define SINK_ACK "!"
+#define SINK_STATUS_REQUEST "?"
+
 #endif//_COMMON_H_

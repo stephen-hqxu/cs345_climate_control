@@ -1,5 +1,4 @@
-CONTIKI_PROJECT = ClimateSensor Sink
-#Relay ActuatorSensor
+CONTIKI_PROJECT = Relay ClimateSensor Sink ActuatorController
 
 # build targets
 all : ${CONTIKI_PROJECT}

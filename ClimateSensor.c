@@ -28,7 +28,7 @@ PROCESS_THREAD(climateSensorProcess, ev, data){
         PROCESS_EXIT();
     }
 
-    etimer_set(&sender_delay, CLOCK_SECOND * 5);
+    etimer_set(&sender_delay, CLOCK_SECOND * 30);
     while(true){
         PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&sender_delay));
 

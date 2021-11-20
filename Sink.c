@@ -4,6 +4,7 @@
 
 //System
 #include <stdlib.h>
+#include <string.h>
 
 static struct simple_udp_connection toClimateSensor_conn;
 static struct simple_udp_connection toActuator_conn;
@@ -29,6 +30,13 @@ PROCESS(sinkProcess, "Sink");
 AUTOSTART_PROCESSES(&sinkProcess);
 
 #define CLIMATE_SENSOR_COUNT 4u
+#define ACTUATOR_CONTROLLER_COUNT 2u
+
+#define DELTA 17u
+#define GAMMA 22u
+
+static uip_ipaddr_t ActuatorStack[ACTUATOR_CONTROLLER_COUNT];
+static size_t ActuatorStackSize;
 
 static void sink_climate_rx_callback(struct simple_udp_connection* conn, 
     const uip_ipaddr_t* sender_addr, uint16_t sender_port, 
@@ -45,10 +53,33 @@ static void sink_climate_rx_callback(struct simple_udp_connection* conn,
 
     TempStack[StackIdx] = (float)atof(reading);
     StackIdx = (StackIdx + 1u) % CLIMATE_SENSOR_COUNT;
+    
     if(StackIdx == 0u){
         //we have collected reading from all 4 sensors, can start calculating mean
         const float meanTemp = calcTempMean(CLIMATE_SENSOR_COUNT, TempStack);
         LOG_INFO("Received all temperature from %d climate sensors, mean temperature is %f\n", CLIMATE_SENSOR_COUNT, meanTemp);
+
+        //TODO temporarily set to always true just for testing.
+        if(/**meanTemp <= DELTA || meanTemp >= GAMMA**/ true){
+            static char control[8];
+            //temperature is not in the comfort range, we need to adjust the ACs
+            LOG_INFO("Mean temperature is outside the comfort range, request AC control.\n");
+
+            if(ActuatorStackSize == ACTUATOR_CONTROLLER_COUNT){
+                //all actuators are online, tell them to turn on/off
+                LOG_INFO("Ready to route temperature to %d AC units.\n", ActuatorStackSize);
+
+                //determine should AC be turned on or off
+                snprintf(control, sizeof(control), (meanTemp <= DELTA) ? "OFF" : "ON");
+                for(unsigned int i = 0u; i < ActuatorStackSize; i++){
+                    simple_udp_sendto(&toActuator_conn, control, strlen(control), ActuatorStack + i);
+                }
+
+            }else{
+                LOG_WARN("Unable to connect to all AC units in the environment yet, because only %d is found.\n", ActuatorStackSize);
+            }
+        }
+
     }
 }
 
@@ -57,14 +88,48 @@ static void sink_actuator_rx_callback(struct simple_udp_connection* conn,
     const uip_ipaddr_t* receiver_addr, uint16_t receiver_port, 
     const uint8_t* data, uint16_t data_length){
     
+    const char* msg = (char*)data;
+    //get the status code
+    if(strncmp(msg, ACTUATOR_STATUS_REQUEST, data_length) == 0){
+        //actuator sends regular updates to notify the sink it sif still alive
+        LOG_INFO("Received actuator status request from ");
+        LOG_INFO_6ADDR(sender_addr);
+        LOG_INFO_("\n");
+        
+        bool registered = ActuatorStackSize > 0ull;
+        for(unsigned int i = 0u; i < ActuatorStackSize; i++){
+            //check if this is an actuator that the sink has never known before
+            if(!uip_ipaddr_cmp(ActuatorStack + i, sender_addr)){
+                registered = false;
+            }
+        }
+        if(!registered && ActuatorStackSize < ACTUATOR_CONTROLLER_COUNT){
+            //this is a new actuator and we have enough space in the table, record this
+            uip_ipaddr_copy(ActuatorStack + ActuatorStackSize, sender_addr);
+            ActuatorStackSize++;
+
+            LOG_INFO("New actuator identified, register into routing table.\n");
+
+            //return a message to the actuator as we have added it to the network
+            static char ack[8];
+            snprintf(ack, sizeof(ack), SINK_ACK);
+            simple_udp_sendto(&toActuator_conn, ack, strlen(ack), sender_addr);
+            
+        }
+    }else{
+        LOG_ERR("Invalid actuator status code received.\n");
+    }
 }
 
 PROCESS_THREAD(sinkProcess, ev, data){
     //static struct etimer sender_delay;
-    //uip_ipaddr_t addr;
-    //static char msg[32];
+    //static char msg[8];
 
     PROCESS_BEGIN();
+
+    //clear the memory of actuator routing table
+    memset(ActuatorStack, 0x00, sizeof(ActuatorStack));
+    ActuatorStackSize = 0ull;
 
     //Sink is the source of the routing tree
     NETSTACK_ROUTING.root_start();
@@ -79,11 +144,15 @@ PROCESS_THREAD(sinkProcess, ev, data){
         PROCESS_EXIT();
     }
 
-    //this timer is used for the sink to check if all sensors are alive
-    // etimer_set(&sender_delay, CLOCK_SECOND * 2);
+    //Update routing table regularly
+    // etimer_set(&sender_delay, CLOCK_SECOND * 45);
     // while(true){
     //     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&sender_delay));
 
+    //     for(unsigned int i = 0u; i < ActuatorStackSize; i++){
+            
+    //     }
+        
     //     etimer_reset(&sender_delay);
     // }
 
