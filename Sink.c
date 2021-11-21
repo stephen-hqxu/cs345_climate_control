@@ -59,8 +59,7 @@ static void sink_climate_rx_callback(struct simple_udp_connection* conn,
         const float meanTemp = calcTempMean(CLIMATE_SENSOR_COUNT, TempStack);
         LOG_INFO("Received all temperature from %d climate sensors, mean temperature is %f\n", CLIMATE_SENSOR_COUNT, meanTemp);
 
-        //TODO temporarily set to always true just for testing.
-        if(/**meanTemp <= DELTA || meanTemp >= GAMMA**/ true){
+        if(meanTemp <= DELTA || meanTemp >= GAMMA){
             static char control[8];
             //temperature is not in the comfort range, we need to adjust the ACs
             LOG_INFO("Mean temperature is outside the comfort range, request AC control.\n");
@@ -70,7 +69,7 @@ static void sink_climate_rx_callback(struct simple_udp_connection* conn,
                 LOG_INFO("Ready to route temperature to %d AC units.\n", ActuatorStackSize);
 
                 //determine should AC be turned on or off
-                snprintf(control, sizeof(control), (meanTemp <= DELTA) ? "OFF" : "ON");
+                snprintf(control, sizeof(control), (meanTemp <= DELTA) ? ACTUATOR_OFF : ACTUATOR_ON);
                 for(unsigned int i = 0u; i < ActuatorStackSize; i++){
                     simple_udp_sendto(&toActuator_conn, control, strlen(control), ActuatorStack + i);
                 }
@@ -92,7 +91,7 @@ static void sink_actuator_rx_callback(struct simple_udp_connection* conn,
     //get the status code
     if(strncmp(msg, ACTUATOR_STATUS_REQUEST, data_length) == 0){
         //actuator sends regular updates to notify the sink it sif still alive
-        LOG_INFO("Received actuator status request from ");
+        LOG_INFO("Received actuator status from ");
         LOG_INFO_6ADDR(sender_addr);
         LOG_INFO_("\n");
         
@@ -116,8 +115,6 @@ static void sink_actuator_rx_callback(struct simple_udp_connection* conn,
             simple_udp_sendto(&toActuator_conn, ack, strlen(ack), sender_addr);
             
         }
-    }else{
-        LOG_ERR("Invalid actuator status code received.\n");
     }
 }
 

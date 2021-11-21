@@ -2,6 +2,9 @@
 .vscode/
 #ignore build files
 build/
+#ignore simulation logs
+run/
 
 #binary files from Cooja
 *.cooja
+*.o

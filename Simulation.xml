@@ -1,0 +1,17 @@
+<plugin>
+    org.contikios.cooja.plugins.ScriptRunner
+    <plugin_config>
+        <script>
+            //Javascript goes here
+        </script>
+
+        <active>false</active>
+    </plugin_config>
+
+    <width>1226</width>
+    <z>-1</z>
+    <height>801</height>
+    <location_x>0</location_x>
+    <location_y>0</location_y>
+    <minimized>true</minimized>
+</plugin>

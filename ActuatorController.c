@@ -19,11 +19,27 @@ static void actuator_rx_callback(struct simple_udp_connection* conn,
         //sink accepts the presence of this actuator
         inNetwork = true;
 
-        LOG_INFO("Received sink ACK for joining the network.\n");
+        LOG_INFO("Received sink ACK for joining the network from ");
 
+    }else if(strncmp(msg, ACTUATOR_ON, data_length) == 0){
+        //request to turn on AC
+        LOG_INFO("Received sink signal to turn actuator ON from ");
+
+        setActuatorMotor(true);
+
+    }else if(strncmp(msg, ACTUATOR_OFF, data_length) == 0){
+        //request to turn off AC
+        LOG_INFO("Received sink signal to turn actuator OFF from ");
+
+        setActuatorMotor(false);
     }else{
-        LOG_WARN("Received unknown message: '%.*s'\n", data_length, (char*)data);
+        LOG_WARN("Received unknown opcode '%.*s'\n", data_length, msg);
+
+        return;
     }
+
+    LOG_INFO_6ADDR(sender_addr);
+    LOG_INFO_("\n");
     
 }
 
@@ -44,14 +60,15 @@ PROCESS_THREAD(actuatorProcess, ev, data){
     }
 
     //To check regularly if the sink is alive
-    etimer_set(&sender_delay, CLOCK_SECOND * 20);
+    //Initially actuator needs to join the network, and it signals the sink regularly.
+    etimer_set(&sender_delay, CLOCK_SECOND * 30);
     while(true){
         PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&sender_delay));
 
         if(NETSTACK_ROUTING.get_root_ipaddr(&dest_addr)){
             snprintf(msg, sizeof(msg), ACTUATOR_STATUS_REQUEST);
 
-            LOG_INFO("Sending actuator status request to ");
+            LOG_INFO("Sending actuator status to ");
             LOG_INFO_6ADDR(&dest_addr);
             LOG_INFO_("\n");
 
@@ -62,8 +79,8 @@ PROCESS_THREAD(actuatorProcess, ev, data){
         }
         
         //if the actuator is in a network, only check network status occasionally
-        //otherwise send regular message to search for a network
-        etimer_set(&sender_delay, CLOCK_SECOND * (inNetwork ? 60 * 2 : 20));
+        //otherwise keep sending regular message to search for a network
+        etimer_set(&sender_delay, CLOCK_SECOND * 60 * (inNetwork ? 20 : 0.5f));
     }
 
     PROCESS_END();

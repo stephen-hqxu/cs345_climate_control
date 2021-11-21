@@ -1,6 +1,5 @@
 //Timer
 #include <sys/ctimer.h>
-#include <sys/atomic.h>
 
 #include <lib/random.h>
 
@@ -61,5 +60,5 @@ float getTemperature(){
 }
 
 void setActuatorMotor(bool power){
-	atomic_cas_uint8((uint8_t*)&ActuatorMotor, (uint8_t)!power, (uint8_t)power);
+	ActuatorMotor = power;
 }

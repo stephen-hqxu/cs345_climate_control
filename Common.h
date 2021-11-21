@@ -27,6 +27,9 @@
 
 #define ACTUATOR_STATUS_REQUEST "?"
 #define ACTUATOR_ACK "!"
+#define ACTUATOR_ON "On"
+#define ACTUATOR_OFF "Off"
+
 #define SINK_ACK "!"
 #define SINK_STATUS_REQUEST "?"
 
