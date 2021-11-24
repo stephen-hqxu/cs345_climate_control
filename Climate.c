@@ -29,7 +29,10 @@ static void timerCallback(void* ptr){
 	Temperature += ActuatorMotor ? DropRate : RiseRate;
 }
 
-static void initClimate(){
+//-------------- Header Functions ---------------------
+#include "Climate.h"
+
+void initClimate(){
 	//a flag to indicate if the climate has been setup
 	static bool setup = false;
 	if(setup){
@@ -50,11 +53,7 @@ static void initClimate(){
 	setup = true;
 }
 
-//-------------- Header Functions ---------------------
-#include "Climate.h"
-
 float getTemperature(){
-	initClimate();
 	//Add some noise to the temperature retrieved by different temperature sensors
 	return Temperature + getNext();
 }

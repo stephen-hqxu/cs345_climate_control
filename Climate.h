@@ -4,9 +4,13 @@
 #include <stdbool.h>
 
 /**
- * @brief Get the temperature of the environment.
- * @return The current temperature of the environment.
- * 
+ * @breif Init climate environment.
+ **/
+void initClimate();
+
+/**
+ * @brief Read the temperature of the environment using the sensor.
+ * @return The temperature in Cel.
  **/
 float getTemperature();
 

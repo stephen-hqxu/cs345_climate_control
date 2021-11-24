@@ -29,12 +29,6 @@ static float calcTempMean(unsigned int count, const float* temps){
 PROCESS(sinkProcess, "Sink");
 AUTOSTART_PROCESSES(&sinkProcess);
 
-#define CLIMATE_SENSOR_COUNT 4u
-#define ACTUATOR_CONTROLLER_COUNT 2u
-
-#define DELTA 17u
-#define GAMMA 22u
-
 static uip_ipaddr_t ActuatorStack[ACTUATOR_CONTROLLER_COUNT];
 static size_t ActuatorStackSize;
 
@@ -119,9 +113,6 @@ static void sink_actuator_rx_callback(struct simple_udp_connection* conn,
 }
 
 PROCESS_THREAD(sinkProcess, ev, data){
-    //static struct etimer sender_delay;
-    //static char msg[8];
-
     PROCESS_BEGIN();
 
     //clear the memory of actuator routing table
@@ -140,18 +131,6 @@ PROCESS_THREAD(sinkProcess, ev, data){
         LOG_ERR("UDP connection from the sink to actuator could not be setup.\n");
         PROCESS_EXIT();
     }
-
-    //Update routing table regularly
-    // etimer_set(&sender_delay, CLOCK_SECOND * 45);
-    // while(true){
-    //     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&sender_delay));
-
-    //     for(unsigned int i = 0u; i < ActuatorStackSize; i++){
-            
-    //     }
-        
-    //     etimer_reset(&sender_delay);
-    // }
 
     PROCESS_END();
 }
