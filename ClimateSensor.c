@@ -11,6 +11,10 @@ static void climate_rx_callback(struct simple_udp_connection* conn,
     const uip_ipaddr_t* sender_addr, uint16_t sender_port, 
     const uip_ipaddr_t* receiver_addr, uint16_t receiver_port, 
     const uint8_t* data, uint16_t data_length){
+    
+    LOG_INFO("Received climate status update to '%.*s' from ", data_length, data);
+    LOG_PRINT_6ADDR(sender_addr);
+    LOG_INFO_("\n");
 
     const char* msg = (char*)data;
     //update AC status

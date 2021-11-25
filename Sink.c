@@ -73,7 +73,7 @@ static void sink_actuator_rx_callback(struct simple_udp_connection* conn,
     //record the previous actuator state to avoid re-sending information to the climate sensor
     static bool previousStatus = false;
 
-    LOG_INFO("Received multicast reply from actuator with address ");
+    LOG_INFO("Received reply from actuator '%.*s' with address ", data_length, data);
     LOG_INFO_6ADDR(sender_addr);
     LOG_INFO_("\n");
 
@@ -90,11 +90,13 @@ static void sink_actuator_rx_callback(struct simple_udp_connection* conn,
     if(currentStatus != previousStatus){
         //status has changed, notify all climate sensors
         simple_udp_send(&toClimateSensor_mcastconn, data, data_length);
+        previousStatus = currentStatus;
 
         LOG_INFO("Current actuator status is different from the previous, route updated message to climate sensors.\n");
+    }else{
+        //otherwise there is no need to resend the same status to save energy (of climate sensors)
+        LOG_INFO("Current actuator status is the same as the previous, no message sent to climate sensors.\n");
     }
-    //otherwise there is no need to resend the same status to save energy (of climate sensors)
-    LOG_INFO("Current actuator status is the same as the previous, no message sent to climate sensors.\n");
 }
 
 static void sink_climate_mcast_callback(struct simple_udp_connection* conn, 

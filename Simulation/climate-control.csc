@@ -326,53 +326,6 @@
     <location_x>423</location_x>
     <location_y>682</location_y>
   </plugin>
-
-<plugin>
-    org.contikios.cooja.plugins.ScriptRunner
-    <plugin_config>
-        <script>
-            //auto-fail time in ms
-TIMEOUT(3600000);
-
-//import java package
-var package = new JavaImporter(java.io);
-//scope of the import
-with(package){
-    var output = new Object();
-
-    while(true){
-        var idStr = id.toString();
-        //check if output file is created
-        if(!output[idStr]){
-            output[idStr] = new FileWriter("mote_" + id + ".log");
-        }
-        //write to file
-        output[idStr].write(time + ' ' + msg + "\n");
-
-        //terminate simulation
-        try{
-            YIELD();
-        }catch(e){
-            for(var ids in output){
-                output[ids].close();
-            }
-
-            throw("Test Ended");
-        }
-    }
-}
-        </script>
-
-        <active>false</active>
-    </plugin_config>
-
-    <width>1226</width>
-    <z>-1</z>
-    <height>801</height>
-    <location_x>0</location_x>
-    <location_y>0</location_y>
-    <minimized>true</minimized>
-</plugin>
-
+  @Simulation.xml@
 </simconf>
 
