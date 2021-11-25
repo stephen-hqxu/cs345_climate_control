@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-static struct simple_udp_connection toClimateSensor_conn;
-static struct simple_udp_connection toActuator_conn;
+static struct simple_udp_connection toClimateSensor_conn, toClimateSensor_mcastconn;
+static struct simple_udp_connection toActuator_conn, toActuator_mcastconn;
 
 /* Auxiliary Functions */
 
@@ -28,9 +28,6 @@ static float calcTempMean(unsigned int count, const float* temps){
 
 PROCESS(sinkProcess, "Sink");
 AUTOSTART_PROCESSES(&sinkProcess);
-
-static uip_ipaddr_t ActuatorStack[ACTUATOR_CONTROLLER_COUNT];
-static size_t ActuatorStackSize;
 
 static void sink_climate_rx_callback(struct simple_udp_connection* conn, 
     const uip_ipaddr_t* sender_addr, uint16_t sender_port, 
@@ -58,19 +55,12 @@ static void sink_climate_rx_callback(struct simple_udp_connection* conn,
             //temperature is not in the comfort range, we need to adjust the ACs
             LOG_INFO("Mean temperature is outside the comfort range, request AC control.\n");
 
-            if(ActuatorStackSize == ACTUATOR_CONTROLLER_COUNT){
-                //all actuators are online, tell them to turn on/off
-                LOG_INFO("Ready to route temperature to %d AC units.\n", ActuatorStackSize);
+            //all actuators are online, tell them to turn on/off
+            LOG_INFO("Ready to route temperature to %d AC units.\n", ACTUATOR_CONTROLLER_COUNT);
 
-                //determine should AC be turned on or off
-                snprintf(control, sizeof(control), (meanTemp <= DELTA) ? ACTUATOR_OFF : ACTUATOR_ON);
-                for(unsigned int i = 0u; i < ActuatorStackSize; i++){
-                    simple_udp_sendto(&toActuator_conn, control, strlen(control), ActuatorStack + i);
-                }
-
-            }else{
-                LOG_WARN("Unable to connect to all AC units in the environment yet, because only %d is found.\n", ActuatorStackSize);
-            }
+            //determine should AC be turned on or off
+            snprintf(control, sizeof(control), (meanTemp <= DELTA) ? ACTUATOR_OFF : ACTUATOR_ON);
+            simple_udp_send(&toActuator_mcastconn, control, strlen(control));
         }
 
     }
@@ -80,44 +70,51 @@ static void sink_actuator_rx_callback(struct simple_udp_connection* conn,
     const uip_ipaddr_t* sender_addr, uint16_t sender_port, 
     const uip_ipaddr_t* receiver_addr, uint16_t receiver_port, 
     const uint8_t* data, uint16_t data_length){
-    
-    const char* msg = (char*)data;
-    //get the status code
-    if(strncmp(msg, ACTUATOR_STATUS_REQUEST, data_length) == 0){
-        //actuator sends regular updates to notify the sink it sif still alive
-        LOG_INFO("Received actuator status from ");
-        LOG_INFO_6ADDR(sender_addr);
-        LOG_INFO_("\n");
-        
-        bool registered = ActuatorStackSize > 0ull;
-        for(unsigned int i = 0u; i < ActuatorStackSize; i++){
-            //check if this is an actuator that the sink has never known before
-            if(!uip_ipaddr_cmp(ActuatorStack + i, sender_addr)){
-                registered = false;
-            }
-        }
-        if(!registered && ActuatorStackSize < ACTUATOR_CONTROLLER_COUNT){
-            //this is a new actuator and we have enough space in the table, record this
-            uip_ipaddr_copy(ActuatorStack + ActuatorStackSize, sender_addr);
-            ActuatorStackSize++;
+    //record the previous actuator state to avoid re-sending information to the climate sensor
+    static bool previousStatus = false;
 
-            LOG_INFO("New actuator identified, register into routing table.\n");
+    LOG_INFO("Received multicast reply from actuator with address ");
+    LOG_INFO_6ADDR(sender_addr);
+    LOG_INFO_("\n");
 
-            //return a message to the actuator as we have added it to the network
-            static char ack[8];
-            snprintf(ack, sizeof(ack), SINK_ACK);
-            simple_udp_sendto(&toActuator_conn, ack, strlen(ack), sender_addr);
-            
-        }
+    //read the actuator status
+    const char* status = (char*)data;
+    bool currentStatus;
+    if(strncmp(status, ACTUATOR_ON, data_length) == 0){
+        currentStatus = true;
+
+    }else if(strncmp(status, ACTUATOR_OFF, data_length) == 0){
+        currentStatus = false;
     }
+
+    if(currentStatus != previousStatus){
+        //status has changed, notify all climate sensors
+        simple_udp_send(&toClimateSensor_mcastconn, data, data_length);
+
+        LOG_INFO("Current actuator status is different from the previous, route updated message to climate sensors.\n");
+    }
+    //otherwise there is no need to resend the same status to save energy (of climate sensors)
+    LOG_INFO("Current actuator status is the same as the previous, no message sent to climate sensors.\n");
+}
+
+static void sink_climate_mcast_callback(struct simple_udp_connection* conn, 
+    const uip_ipaddr_t* sender_addr, uint16_t sender_port, 
+    const uip_ipaddr_t* receiver_addr, uint16_t receiver_port, 
+    const uint8_t* data, uint16_t data_length){
+
+}
+
+static void sink_actuator_mcast_callback(struct simple_udp_connection* conn, 
+    const uip_ipaddr_t* sender_addr, uint16_t sender_port, 
+    const uip_ipaddr_t* receiver_addr, uint16_t receiver_port, 
+    const uint8_t* data, uint16_t data_length){
+    
 }
 
 PROCESS_THREAD(sinkProcess, ev, data){
-    PROCESS_BEGIN();
+    static uip_ipaddr_t ac_mcastAddr, climate_sensor_mcastAddr;
 
-    //clear the memory of actuator routing table
-    memset(ActuatorStack, 0x00, sizeof(ActuatorStack));
-    ActuatorStackSize = 0ull;
+    PROCESS_BEGIN();
 
     //Sink is the source of the routing tree
     NETSTACK_ROUTING.root_start();
@@ -127,9 +124,26 @@ PROCESS_THREAD(sinkProcess, ev, data){
         LOG_ERR("UDP connection from the sink to climate sensor could not be setup.\n");
         PROCESS_EXIT();
     }
-    if(!simple_udp_register(&toActuator_conn, SINK_PORT, NULL, ACTUATOR_PORT, &sink_actuator_rx_callback)){
+    if(!simple_udp_register(&toActuator_conn, SINK_PORT, NULL, ACTUATOR_PORT, &sink_actuator_rx_callback)){ LOG_INFO("Received actuator callback.\n");
         LOG_ERR("UDP connection from the sink to actuator could not be setup.\n");
         PROCESS_EXIT();
+    }
+
+    //set mcast group address to climate sensor
+    SINK_CLIMATE_SENSOR_MCAST_GROUP_ADDR(climate_sensor_mcastAddr);
+    if(!simple_udp_register(&toClimateSensor_mcastconn, SINK_PORT, &climate_sensor_mcastAddr, CLIMATE_SENSOR_PORT, &sink_climate_mcast_callback)){
+        LOG_ERR("UDP multicast connection from the sink to climate sensor could not be setup.\n");
+        PROCESS_EXIT();
+    }
+    //set mcast group address to AC
+    ACTUATOR_SINK_MCAST_GROUP_ADDR(ac_mcastAddr);
+    if(!simple_udp_register(&toActuator_mcastconn, SINK_PORT, &ac_mcastAddr, ACTUATOR_PORT, &sink_actuator_mcast_callback)){
+        LOG_ERR("UDP multicast connection from the sink to actuator could not be setup.\n");
+        PROCESS_EXIT();
+    }
+
+    while(true){
+        PROCESS_WAIT_EVENT();
     }
 
     PROCESS_END();

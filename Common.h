@@ -6,11 +6,15 @@
 
 //Network Sim
 #include <contiki.h>
+#include <contiki-lib.h>
+#include <contiki-net.h>
+
 #include <sys/etimer.h>
 
 #include <net/routing/routing.h>
 #include <net/netstack.h>
 #include <net/ipv6/simple-udp.h>
+#include <net/ipv6/multicast/uip-mcast6.h>
 
 #include <sys/energest.h>
 
@@ -27,7 +31,8 @@
 #define CLIMATE_SENSOR_PORT 8765
 #define ACTUATOR_PORT 24680
 
-#define ACTUATOR_CLIMATE_BROADCAST_PORT 24678
+#define ACTUATOR_SINK_MCAST_GROUP_ADDR(DEST) uip_ip6addr(&DEST, 0xFF1E, 0, 0, 0, 0, 0, 0x89, 0xABCD)
+#define SINK_CLIMATE_SENSOR_MCAST_GROUP_ADDR(DEST) uip_ip6addr(&DEST, 0xFF1E, 0, 0, 0, 0, 0, 0xDC, 0xBA98)
 
 #define ACTUATOR_STATUS_REQUEST "?"
 #define ACTUATOR_ACK "!"
@@ -36,6 +41,8 @@
 
 #define SINK_ACK "!"
 #define SINK_STATUS_REQUEST "?"
+
+#define CLIMATE_SENSOR_STATUS_REQUEST "?"
 
 //information about the topology
 #define CLIMATE_SENSOR_COUNT 4u
