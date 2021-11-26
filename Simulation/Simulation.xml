@@ -1,11 +1,8 @@
 <plugin>
     org.contikios.cooja.plugins.ScriptRunner
     <plugin_config>
-        <script>
-            @Script.js@
-        </script>
-
-        <active>false</active>
+        <scriptfile>../Simulation/Script.js</scriptfile>
+        <active>true</active>
     </plugin_config>
 
     <width>1226</width>

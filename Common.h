@@ -16,8 +16,6 @@
 #include <net/ipv6/simple-udp.h>
 #include <net/ipv6/multicast/uip-mcast6.h>
 
-#include <sys/energest.h>
-
 //Log
 #include <sys/log.h>
 #define LOG_LEVEL LOG_LEVEL_INFO
@@ -34,15 +32,8 @@
 #define ACTUATOR_SINK_MCAST_GROUP_ADDR(DEST) uip_ip6addr(&DEST, 0xFF1E, 0, 0, 0, 0, 0, 0x89, 0xABCD)
 #define SINK_CLIMATE_SENSOR_MCAST_GROUP_ADDR(DEST) uip_ip6addr(&DEST, 0xFF1E, 0, 0, 0, 0, 0, 0xDC, 0xBA98)
 
-#define ACTUATOR_STATUS_REQUEST "?"
-#define ACTUATOR_ACK "!"
 #define ACTUATOR_ON "On"
 #define ACTUATOR_OFF "Off"
-
-#define SINK_ACK "!"
-#define SINK_STATUS_REQUEST "?"
-
-#define CLIMATE_SENSOR_STATUS_REQUEST "?"
 
 //information about the topology
 #define CLIMATE_SENSOR_COUNT 4u

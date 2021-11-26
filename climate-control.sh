@@ -4,8 +4,7 @@ simulationOutput="./run"
 
 #copy javascript to the COOJA simulation script
 prepare_simulation(){
-    js_identifier="@Script.js"
-    nogui_identifier="@Simulation.xml@"
+    simulation_identifier="@Simulation.xml@"
 
     #attempt to run the simulation in a new folder
     mkdir -p $simulationOutput
@@ -14,10 +13,9 @@ prepare_simulation(){
     cp ./Simulation/climate-control.csc ./$simulationOutput/
     cd ./$simulationOutput/
     #insert line with templates
-    sed -i "/${nogui_identifier}/ r ../Simulation/Simulation.xml" ./climate-control.csc
-    sed -i "/${js_identifier}/ r ../Simulation/Script.js" ./climate-control.csc
+    sed -i "/${simulation_identifier}/ r ../Simulation/Simulation.xml" ./climate-control.csc
     #remove template identifiers
-    sed -i -e "/${nogui_identifier}/ c\ " -e "/${js_identifier}/ c\ " ./climate-control.csc
+    sed -i -e "/${simulation_identifier}/ c\ " ./climate-control.csc
 }
 
 if test "$1" == "clean"
