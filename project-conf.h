@@ -5,6 +5,7 @@
 
 //global logging
 #define LOG_CONF_LEVEL_MAC LOG_LEVEL_INFO
+#define LOG_CONF_LEVEL_RPL LOG_LEVEL_INFO
 //enable printing of packet counters
 #define LINK_STATS_CONF_PACKET_COUNTERS 1
 
