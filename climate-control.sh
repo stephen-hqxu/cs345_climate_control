@@ -29,7 +29,7 @@ else
     prepare_simulation
 
     #run COOJA NoGUI simulation
-    java -jar ../../../tools/cooja/dist/cooja.jar -nogui='./climate-control.csc' -contiki-ng='../../..'
+    java -mx2048m -jar ../../../tools/cooja/dist/cooja.jar -nogui='./climate-control.csc' -contiki-ng='../../..'
 fi
 
 exit 0

@@ -1,5 +1,5 @@
 //auto-fail time in ms
-TIMEOUT(3600000);
+TIMEOUT(15120000);
 
 //import java package
 var package = new JavaImporter(java.io);
