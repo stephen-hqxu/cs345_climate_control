@@ -2,22 +2,6 @@
 
 simulationOutput="./run"
 
-#copy javascript to the COOJA simulation script
-prepare_simulation(){
-    simulation_identifier="@Simulation.xml@"
-
-    #attempt to run the simulation in a new folder
-    mkdir -p $simulationOutput
-
-    #copy COOJA script to the output make sure we don't change it by accident
-    cp ./Simulation/climate-control.csc ./$simulationOutput/
-    cd ./$simulationOutput/
-    #insert line with templates
-    sed -i "/${simulation_identifier}/ r ../Simulation/Simulation.xml" ./climate-control.csc
-    #remove template identifiers
-    sed -i -e "/${simulation_identifier}/ c\ " ./climate-control.csc
-}
-
 if test "$1" == "clean"
 then
     #clean simulation log
@@ -25,11 +9,12 @@ then
     #clean compiled binary
     make distclean
 else
-    #prepare simulation script
-    prepare_simulation
+    #attempt to run the simulation in a new folder
+    mkdir -p $simulationOutput
+    cd $simulationOutput
 
     #run COOJA NoGUI simulation
-    java -mx2048m -jar ../../../tools/cooja/dist/cooja.jar -nogui='./climate-control.csc' -contiki-ng='../../..'
+    java -mx2048m -jar ../../../tools/cooja/dist/cooja.jar -nogui='../Simulation/climate-control.csc' -contiki-ng='../../..'
 fi
 
 exit 0

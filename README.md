@@ -2,6 +2,10 @@
 
 Year 3 Sensor Networks and Mobile Data Communications Coursework
 
+## Dependency
+
+- [Contiki-ng](https://github.com/contiki-ng/contiki-ng)
+
 ## Build instructions
 
 - Make sure you unzip the project archive under Contiki root directory. Once you have done that *coursework* folder should appear.
@@ -23,9 +27,9 @@ cd ./coursework/climate-control
 
 ```
 
-The simulation is set to run for 15000 seconds (around 4.2 hours), and it shows the actuators turn on and off twice each. The simulation script is written in *Javascript* and parsed using *Java Nashorn* engine.
+The simulation is set to run for 16200 seconds (around 4.5 hours), and it shows the actuators turn on and off twice each. The simulation script is written in *Javascript* and parsed using *Java Nashorn* engine.
 
-> There is some misinformation in Cotiki wiki page where it says the script uses *Java Rhino* engine, in fact it is not the case, tested on DCS machine with OpenJDK-11.0.13.
+> There are some misinformation in Cotiki wiki page where it says the script uses *Java Rhino* engine, in fact it is not the case, tested on DCS machine with OpenJDK-11.0.13.
 
 - To delete every compiled binaries, type:
 
