@@ -1,0 +1,139 @@
+\documentclass[12pt, oneside, a4paper]{article}
+
+\usepackage{graphicx}
+\usepackage[margin=2.0cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{amssymb}
+\usepackage{float}
+\usepackage[font=normalsize,labelfont=bf]{caption}
+
+\graphicspath{{./img/}}
+
+\setlength{\parskip}{0.5cm}
+\renewcommand{\baselinestretch}{1.0}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{CS345 Climate Control Report}
+\chead{\thepage}
+\rhead{u1919771}
+
+\begin{document}
+    \normalsize
+    \flushleft
+
+    \section{Introduction}
+
+    The climate control network is consist of the following motes:
+
+    \begin{itemize}[label=\(\square\)]
+        \item Climate sensors (\textbf{ClimateSensor.c}), as a detector to the temperature.
+        \item Sink (\textbf{Sink.c}), as a network coordinator that receives data from various nodes and sends instructions.
+        \item Actuator controller (\textbf{ActuatorController.c}), that can affect the climate in the environment when it is turned on.
+        \item Relay (\textbf{Relay.c}), has no special ability other than forwarding packets.
+    \end{itemize}
+
+    The application is built using Contiki-ng as mote operating system, and uses Cooja mote for various nodes.
+
+    \subsection{Climate variation}
+
+    Climate controlling system is located in \textbf{Climate.c} and it is used by climate sensors for retrieval of temperature. Based on the requirement, temperature is initialised to 20 degree as soon as the process of climate sensor starts. 
+    
+    Temperature variation is then controlled by a callback-timer (\textbf{ctimer.h}) provided by Contiki OS. The temperature will be updated every minute with rate based on the status of actuators. In additional every time climate sensor senses from the environment temperature obtained should have a slight variation; this is achieved by randomly generating a number between -0.5 to 0.5 and add to the actual temperature.
+    
+    \section{Routing}
+
+    All routing methods are built based on \textit{IPv6 Routing Protocol for Low-Power and Lossy Networks}. RPL protocol is more favourable as instead of creating routing tables to every node in the network, it creates a tree-structured routing table with sink as the root node, which, in wireless sensor networks, receives and sends most packets from and to other nodes in the network.
+
+    RPL Classic is used in this network rather than the default RPL Lite, as being found out that RPL Lite does not support multicasting which will be used later.
+
+    \subsection{Climate sensors to sink}
+
+    As specified in the requirement, climate sensors should route temperature read to the sink every 5 minutes. This can be easily achieved by using the routing tree provided by RPL protocol, and unicasts to the sink.
+
+    \subsection{Average temperature computing}
+
+    Sink features a temperature stack data structure to hold all incoming temperature from climate sensors. Upon receiving temperature from a climate sensor, the temperature reading is pushed into the temperature stack, and increment the container size by 1. 
+    
+    The number of climate sensor is a defined constant, which is 4. When the container size reaches this number, sink knows all climate sensors have transmitted their temperature and therefore mean temperature can then be calculated. All tempereature values are then popped from the temperature stack, and reset container size to 1. After computing the average temperature, two things may happen:
+
+    \begin{enumerate}[label=\arabic*.]
+        \item Mean temperature is within the ``comfort'' range and therefore no further action needs to be performed.
+        \item Mean temperature is outside such range therefore sink needs to notify the actuators to either turn on or off to control the climate.
+    \end{enumerate}
+
+    \subsection{Sink to actuators}
+
+    When the mean temperature goes out of the allowed range, sink needs to multicast \textit{ON/OFF} instructions to actuators. This is done using \textit{Enhanced Stateless Multicast RPL Forwarding}, also available in Contiki OS. There exists another multicast protocol, \textit{Multicast Protocol for Low Power and Lossy Networks}; by contrast, MPL uses a pre-defined multicast address instead of allowing nodes to define their own group addresses.
+
+    Sink forms a multicast group using a group IP address. This group address is shared with actuators, allowing them to join this group and listens to any packets transferred. Sink then send a simple \textit{ON/OFF} packet via this group adress. Actuators then can turn on or off based on the receiving instructions.
+
+    \subsection{Status update}
+
+    The new actuator status needs to be acknowledged by climate sensors such that temperature can vary correctly based on the new status.
+
+    After changing the status on actuators, it replies to the sink using RPL unicast. Sink forms another multicast group using ESMRF that is shared with 4 climate sensors. When sink receives acknowledgement of status update, it redirect the updated status to climate sensors.
+
+    As both actuators are replying back to the sink at the same time, to avoid forwarding the same message twice to climate sensors, sink also keeps a variable to record the previous status of the actuator, whether it is already on or off. Sink only multicasts message to climate sensors if and only if previous status is different from the current, such that when the sink receives ACK from the first actuator, variable is changed and message is redirected to climate sensors; and for the ACK from the second actuator, no further operations are required as the variable remains unchanged.
+
+    Efforts are made to ensure packets are sent to nodes required, i.e., the network avoids broadcast, and only sends packet whenever necessary. So, this variable is also used to avoid sending repetitive packets to the actuators. When the sink gets temperature from all climate sensors, if the next deduced actuator status is the same as the previous, no message needs to be sent to actuators. This variable is updated only when sink receives ACK from the actuators to ensure instructions have been delivered correctly.
+
+    It has been considered that actuators can simply route the new status to all climate sensors. However doing so requires building routing tables from actuators to sensors and cannot avoid sending duplicated packets, for example all climate sensors will receive the same status from both actuators. By forwarding via the sink the network not only exploits existing routing information RPL provided but also allow the sink to record the status thus enabling optimisation.
+
+    \section{Network analysis}
+
+    The simulation starts in the morning at \(20^{o}\) and has been run for 16200 seconds (equals to 4.5 hours). The temperature rises at specific rate based on the actuator status. Actuator will be turned on when temperature goes above \(22^{o}\) and turned off when falls below \(17^{o}\). As shown in figure \ref{temp} the behaviour is illustrated.
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[scale = 0.5]{temp.png}
+        \caption{Shows the temperature variation in the room throughout the experiment, with actuators being turned on and off twice each.}
+        \label{temp}
+    \end{figure}
+
+    Every 5 minutes, all 4 climate sensors send temperature reading to the sink. This is shown in figure \ref{sensor_sink}.
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[scale = 0.5]{sink_sensor.png}
+        \caption{Illustrates number of message sent from various climate sensors to the sink.}
+        \label{sensor_sink}
+    \end{figure}
+
+    As discussed earlier, sink only route updated status to the actuators only when the status has changed compared to the previous status. Therefore it can be easily seen the number of message sent to the actuators is equal to the number of turning point shown in figure \ref{temp}.
+
+    From this diagram, it also illustrates the rate of climate change. Notice that it takes longer time before switching actuators to OFF than switching ON, as the rate of temperature rises is faster than drops.
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[scale = 0.5]{sink_actuator.png}
+        \caption{Demonstrates number of message sent the sink to various actuators.}
+    \end{figure}
+
+    Energest, an energy analysis tool provided by Contiki, was considered to be inaccruate as it does not work very well on Cooja mote. It does not allow fine-control of switching from working to low power mode on CPU and turning radio on and off, therefore energy stats acquired from energest log all have full CPU and radio ON time.
+
+    Instead of using energest, energy consumption is simply measured by the number of packet being transmitted and received by various nodes, such information can be obtained by turning on MAC logging and link stats are written. Each TX, ACK and RX packet accumulates the energy usage by 1. The energy usage shown in figure \ref{energy} is average energy usage in every 100 seconds.
+
+    Energy usage peaks at the beginning of the simulation as RPL is attempting to discover neighbours and build routing tables. As the network is stable (no node malfunctions nor topological changes), no major table reconstruction is required therefore subsequent energy usage is lower. 
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[scale = 0.5]{energy.png}
+        \caption{Represents the average amount of energy consumed within the entire network.}
+        \label{energy}
+    \end{figure}
+
+    Figure \ref{heatmap} shows the energy consumption per node in the network, with darker-red color as more energy used and lighter-red color as less. Sink is located at the centre of the network while climate sensors and actuators are all around the edge of the network, the rests are relays which provide no special functionalities other than forwarding packets. It can be clearly discovered that nodes around the sink uses the most amount of energy while leaf nodes use less.
+
+    In fact, using a grid topology is highly inefficient due to a large amount of overlapping transmission range, information sent has higher chance of overheard by other nodes.
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[scale = 0.6]{heatmap.png}
+        \caption{Indicates the average amount of energy consumed by individual nodes in the network.}
+        \label{heatmap}
+    \end{figure}
+
+\end{document}
