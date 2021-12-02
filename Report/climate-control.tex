@@ -93,7 +93,7 @@
         \label{temp}
     \end{figure}
 
-    Every 5 minutes, all 4 climate sensors send temperature reading to the sink. This is shown in figure \ref{sensor_sink}.
+    Every 5 minutes, all 4 climate sensors are required to send temperature reading to the sink. This behaviour is defined in figure \ref{sensor_sink}.
 
     \begin{figure}[H]
         \centering
@@ -112,9 +112,9 @@
         \caption{Demonstrates number of message sent the sink to various actuators.}
     \end{figure}
 
-    Energest, an energy analysis tool provided by Contiki, was considered to be inaccruate as it does not work very well on Cooja mote. It does not allow fine-control of switching from working to low power mode on CPU and turning radio on and off, therefore energy stats acquired from energest log all have full CPU and radio ON time.
+    Energest, an energy analysis tool provided by Contiki, was considered to be inaccruate as it does not work very well on Cooja mote. It has be found to be difficult to switch CPU mode from working to low-power and turn radio on and off, therefore energy stats acquired from energest logs all have full CPU and radio ON time.
 
-    Instead of using energest, energy consumption is simply measured by the number of packet being transmitted and received by various nodes, such information can be obtained by turning on MAC logging and link stats are written. Each TX, ACK and RX packet accumulates the energy usage by 1. The energy usage shown in figure \ref{energy} is average energy usage in every 100 seconds.
+    Instead of using energest, energy consumption is simply measured by the number of packet being transmitted and received by various nodes, such information can be obtained by turning on MAC logging and link stats are written. Each TX, ACK and RX packet accumulates the energy usage by 1. The energy usage shown in figure \ref{energy} is average energy usage in every 100 seconds. By doing this, we assume the motes are sleeping with radio off all the time except it is on their schedule to exchange message. 
 
     Energy usage peaks at the beginning of the simulation as RPL is attempting to discover neighbours and build routing tables. As the network is stable (no node malfunctions nor topological changes), no major table reconstruction is required therefore subsequent energy usage is lower. 
 
@@ -125,9 +125,9 @@
         \label{energy}
     \end{figure}
 
-    Figure \ref{heatmap} shows the energy consumption per node in the network, with darker-red color as more energy used and lighter-red color as less. Sink is located at the centre of the network while climate sensors and actuators are all around the edge of the network, the rests are relays which provide no special functionalities other than forwarding packets. It can be clearly discovered that nodes around the sink uses the most amount of energy while leaf nodes use less.
+    Figure \ref{heatmap} shows the energy consumption per node in the network, with darker-red color as more energy used and lighter-red color as less. Sink is located at the centre of the network while climate sensors are located at 4 corners and actuators are at the opposite horizontal edge of the network, the rests are relays which provide no special functionalities other than forwarding packets. Climate sensors and actuators do not overlap with the sink, meaning messages sent from and to them need to go via various relays. It can be clearly discovered that nodes around the sink uses the most amount of energy while leaf nodes use less.
 
-    In fact, using a grid topology is highly inefficient due to a large amount of overlapping transmission range, information sent has higher chance of overheard by other nodes.
+    In fact, using a grid topology (like in the diagram shown) is highly inefficient due to a large amount of overlapping transmission range, information sent has higher chance of overheard by other nodes. 
 
     \begin{figure}[H]
         \centering
